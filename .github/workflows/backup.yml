@@ -1,0 +1,33 @@
+name: Fetch Issues to CSV
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fetch-issues:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas
+
+      - name: Run Fetch Issues Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+        run: python /src/fetch_issues.py
+
+      - name: Upload CSV as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: issues-csv
+          path: issues.csv
