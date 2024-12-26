@@ -37,7 +37,7 @@ def get_github_issue(repository_id, issue_id, token, label):
 # Example usage
 repository_id = 'virtual-labs/bugs-virtual-labs'  # Replace with your GitHub repository ID
 # issue_id = 4689  # Replace with the issue ID you want to query
-token = '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'  # Replace with your GitHub token
+token = 'TOKEN_HERE'  # Replace with your GitHub token
 
 FN = ['4341', '4329', '3997', '3705', '3640', '3329', '3317', '3316', '3315', '3193', '3160', '2372', '2352']
 FP= ['4689', '4610', '4583', '4580', '4544', '4475', '4275', '4269', '4253', '4251', '4221', '4220', '4098', '4091', '4083', '3864', '3748', '3747', '3723', '3707', '3706', '3610', '3535', '3407', '3384', '3383', '3286', '3269', '3140', '3038', '3037', '3036', '3035', '3027', '3026', '2961', '2960', '2942', '2789', '2582', '2581', '2580', '2579', '2578', '2534', '2533', '2486', '2485', '2484', '2483', '2482', '2481', '2480']
