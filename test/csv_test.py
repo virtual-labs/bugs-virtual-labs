@@ -6,7 +6,7 @@ import pickle
 
 # Load environment variables
 import os
-KEY = 'AIzaSyDAa-5nvTJmsLdA7_p0cF9UTFVtmgLLKk8'
+KEY = 'GEMINI_KEY_HERE'
 global total
 total = 1
 if not KEY:
@@ -17,7 +17,7 @@ if not KEY:
 genai.configure(api_key=KEY)
 
 # Template for labeling issues
-TEMPLATE = 'You are a content moderator for GitHub issues. Your task is to label issues as inappropriate or not. Given an issue return only NSFW if appropriate else return SFW. Nothing else.\nIssue\n'
+TEMPLATE = 'You are a content moderator for GitHub issues. Your task is to label issues as inappropriate or not. Inappropriate refers to issues containing hateful/profane language. Given an issue return only NSFW if inappropriate else return SFW. Nothing else.\nIssue\n'
 
 def predict_label(comment):
     # Configure the generative model
@@ -45,16 +45,15 @@ def get_comments_from_csv(csv_path):
         for row in reader:
             content = row['body']
             extracted_content = ''
-            flag = 0
+            flag = False
             for line in content.split("\n"):
                 if 'Additional info' in line:
-                    flag = 1
+                    flag = True
                 elif 'UserAgent' in line:
-                    flag = 0
                     break
-                if flag == 1 and 'UserAgent' not in line:
+                if flag:
                     extracted_content += line.replace('Additional info-', '').strip() + ' '
-            
+
             issue = {
                 "id": row['id'],
                 "number": row['number'],

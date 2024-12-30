@@ -11,7 +11,7 @@ if not TOKEN or not KEY:
     exit(1)
 
 OWNER = "virtual-labs"
-REPO = "bugs-virtual-labs-test"
+REPO = "bugs-virtual-labs"
 
 # Configure generative AI
 genai.configure(api_key=KEY)
@@ -42,18 +42,15 @@ def get_comments(issues):
     infos = []
     for issue in issues:
         curr_issue = {issue['number']: ''}
-        flag = 0
+        flag = False
         content = issue['body'].split("\n")
         for line in content:
             if 'Additional info' in line:
-                flag = 1
+                flag = True
             elif 'UserAgent' in line:
-                flag = 0
                 break
-            if flag == 1 and 'UserAgent' not in line:
-                curr_issue[issue['number']] += (line.replace('Additional info-', '').strip())
-            elif flag == 1 and 'UserAgent' in line:
-                break
+            elif flag:
+                curr_issue[issue['number']] += line.replace('Additional info-', '').strip()
         infos.append(curr_issue)
     return infos
 
@@ -75,7 +72,7 @@ headers = {
 def get_issues(url, headers):
     issues = []
     params = {
-        "labels": "Unprocessed",
+        "labels": "UNPROCESSED",
         "state": "open",
         "per_page": 100,
         "page": 1
@@ -120,4 +117,4 @@ for label in labels:
         print(response.text)
 
     # Remove the Unprocessed label for all issues
-    remove_label(issue_number, "Unprocessed")
+    remove_label(issue_number, "UNPROCESSED")
