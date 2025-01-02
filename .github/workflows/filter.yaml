@@ -33,5 +33,5 @@ jobs:
           TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
           KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
-          python /src/run_filter.py > result.txt
+          python src/run_filter.py > result.txt
           cat result.txt
