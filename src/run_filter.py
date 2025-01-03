@@ -18,10 +18,12 @@ genai.configure(api_key=KEY)
 
 # Template for labeling issues
 # Read template from file
-with open('./prompt_template.txt', 'r') as f:
+file_path = os.path.join(os.getcwd(), 'data', 'prompt_template.txt')
+with open(file_path, 'r') as f:
     TEMPLATE = f.read().strip()
 
 if not TEMPLATE:
+    
     TEMPLATE = 'You are a content moderator for GitHub issues. Your task is to label issues as inappropriate or not. Inappropriate refers to issues containing hateful/profane language. Given an issue return only NSFW if inappropriate else return SFW. Nothing else.\nIssue\n'
 
 def predict_label(comment):
