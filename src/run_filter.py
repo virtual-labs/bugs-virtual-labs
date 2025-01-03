@@ -17,7 +17,12 @@ REPO = "bugs-virtual-labs"
 genai.configure(api_key=KEY)
 
 # Template for labeling issues
-TEMPLATE = 'You are a content moderator for github issues. Your task is to label issues as inappropriate or not. Given an issue return only NSFW if appropriate else return SFW. Nothing else.\nIssue\n'
+# Read template from file
+with open('./prompt_template.txt', 'r') as f:
+    TEMPLATE = f.read().strip()
+
+if not TEMPLATE:
+    TEMPLATE = 'You are a content moderator for GitHub issues. Your task is to label issues as inappropriate or not. Inappropriate refers to issues containing hateful/profane language. Given an issue return only NSFW if inappropriate else return SFW. Nothing else.\nIssue\n'
 
 def predict_label(comment):
     # Create the model
@@ -88,7 +93,7 @@ def get_issues(url, headers):
 def remove_label(issue_number, label):
     url = f"https://api.github.com/repos/{OWNER}/{REPO}/issues/{issue_number}/labels/{label}"
     response = requests.delete(url, headers=headers)
-    if response.status_code == 204:
+    if response.status_code == 200:
         print(f"Successfully removed label '{label}' from issue #{issue_number}")
     else:
         print(f"Error removing label '{label}' from issue #{issue_number}: {response.status_code} - {response.text}")
