@@ -1,13 +1,20 @@
 import requests
 import os
+import logging
+import json
 import google.generativeai as genai
+
+import typing_extensions as typing
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)  
 
 # Load environment variables
 TOKEN = os.getenv('TOKEN')
 KEY = os.getenv('KEY')
 
 if not TOKEN or not KEY:
-    print("Please set the environment variables REPO_ACCESS_TOKEN and API_KEY")
+    logger.critical("Please set the environment variables REPO_ACCESS_TOKEN and API_KEY")
     exit(1)
 
 OWNER = "virtual-labs"
@@ -20,11 +27,17 @@ genai.configure(api_key=KEY)
 # Read template from file
 file_path = os.path.join(os.getcwd(), 'data', 'prompt_template.txt')
 with open(file_path, 'r') as f:
-    TEMPLATE = f.read().strip()
+    template = f.read().strip()
 
-if not TEMPLATE:
+if not template:
     
-    TEMPLATE = 'You are a content moderator for GitHub issues. Your task is to label issues as inappropriate or not. Inappropriate refers to issues containing hateful/profane language. Given an issue return only NSFW if inappropriate else return SFW. Nothing else.\nIssue\n'
+    template = 'You are a content moderator for GitHub issues. Your task is to label issues as inappropriate or not. Inappropriate refers to issues containing hateful/profane language. Given an issue return only NSFW if inappropriate else return SFW. Nothing else.\nIssue\n'
+
+
+class ContentCategory(typing.TypedDict):
+    category: str
+    explanation: str
+
 
 def predict_label(comment):
     # Create the model
@@ -32,18 +45,28 @@ def predict_label(comment):
         "temperature": 1,
         "top_p": 0.95,
         "top_k": 40,
-        "max_output_tokens": 8192,
-        "response_mime_type": "text/plain",
+        "max_output_tokens": 512,
+        "response_mime_type": "application/json",
+        "response_schema": ContentCategory
     }
     model = genai.GenerativeModel(
         model_name="gemini-1.5-flash",
         generation_config=generation_config,
     )
-    chat_session = model.start_chat(history=[])
-    response = chat_session.send_message(f"{TEMPLATE}{comment}")
-    if 'NSFW' in response.text:
-        return 'NSFW'
-    return 'SFW'
+    # chat_session = model.start_chat(history=[])
+    # chat_message = (f"{template}{comment}")
+    # logger.info(chat_message)
+    # response = chat_session.send_message(f"{template}{comment}")
+
+    prompt = template.format(comment)
+    logger.info("Comment to be moderated:: %s", comment)
+    response = model.generate_content(prompt)
+    logger.info(response.text)
+    category = json.loads(response.text)
+    # if 'NSFW' in response.text:
+    #     return 'NSFW'
+    # return 'SFW'
+    return category
 
 def get_comments(issues):
     infos = []
@@ -56,8 +79,9 @@ def get_comments(issues):
                 flag = True
             elif 'UserAgent' in line:
                 break
-            elif flag:
-                curr_issue[issue['number']] += line.replace('Additional info-', '').strip()
+
+            if flag:
+                curr_issue[issue['number']] += line.replace('**Additional info-**', '').strip()
         infos.append(curr_issue)
     return infos
 
@@ -65,8 +89,8 @@ def get_labels(comments):
     labels = []
     for comment in comments:
         comment_str = list(comment.values())[0]
-        label = predict_label(comment_str)
-        labels.append({list(comment.keys())[0]: label})
+        classificationData = predict_label(comment_str)
+        labels.append({list(comment.keys())[0]: classificationData['category']})
     return labels
 
 # API URL and headers
@@ -77,6 +101,7 @@ headers = {
 
 # Get all the issues with the Unprocessed label
 def get_issues(url, headers):
+    logger.debug("Fetching all issues from %s", url)
     issues = []
     params = {
         "labels": "UNPROCESSED",
@@ -87,8 +112,9 @@ def get_issues(url, headers):
     response = requests.get(url, headers=headers, params=params)
     if response.status_code == 200:
         issues = response.json()
+        logger.debug("Succesfully fetched all issues")
     else:
-        print(f"Error: {response.status_code} - {response.text}")
+        logger.error(f"Error: {response.status_code} - {response.text}")
     return issues
 
 # Remove a label from an issue
@@ -117,7 +143,7 @@ for label in labels:
     label_value = list(label.values())[0]
 
     # Add the Inappropriate label for NSFW issues
-    if label_value == 'NSFW':
+    if label_value == 'Inappropriate':
         url = f"https://api.github.com/repos/{OWNER}/{REPO}/issues/{issue_number}/labels"
         response = requests.post(url, headers=headers, json={"labels": ["Inappropriate"]})
         print(response.status_code)
