@@ -8,7 +8,6 @@ on:
   # ##whenever issue is opened
   issues:
     types: [opened]
-  ##################Uncomment above code to run the workflow periodically####################
 
 jobs:
   run-script:
@@ -33,5 +32,4 @@ jobs:
           REPO_ACCESS_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
           API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
-          python src/run_filter.py > result.txt
-          cat result.txt
+          python src/run_filter.py
