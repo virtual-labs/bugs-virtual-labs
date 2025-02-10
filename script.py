@@ -133,7 +133,7 @@ def load_progress():
 
 def process_issues(start_id=1000, end_id=1100, delay=3):
     """Process issues, modify body, and update them with rate limit handling."""
-    last_processed_id = load_progress()
+    # last_processed_id = load_progress()
     start_id = max(start_id, last_processed_id + 1)  # Resume from last progress
 
     print(f"🚀 Starting from issue ID: {start_id}")
@@ -152,7 +152,7 @@ def process_issues(start_id=1000, end_id=1100, delay=3):
                     if not success:
                         failed_issues.append(issue["number"])
                 
-                save_progress(issue_id)  # Save progress after each issue
+                # save_progress(issue_id)  # Save progress after each issue
 
             time.sleep(delay)  # Add delay between requests to prevent rate limits
 
