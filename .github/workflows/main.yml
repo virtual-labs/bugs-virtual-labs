@@ -1,0 +1,25 @@
+name: Update Issue Images
+
+on:
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-issues:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        pip install PyGithub pytz
+    
+    - name: Run update script
+      env:
+        MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+      run: python script.py
