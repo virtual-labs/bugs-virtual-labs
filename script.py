@@ -117,24 +117,24 @@ def update_issue(issue_id, title, body):
             print(f"❌ Failed to update issue [#{issue_id}] '{title}': {response.status_code}")
             return False
 
-def save_progress(last_processed_id):
-    """Save last processed issue ID to a file."""
-    with open('issue_progress.json', 'w') as f:
-        json.dump({'last_id': last_processed_id}, f)
+# def save_progress(last_processed_id):
+#     """Save last processed issue ID to a file."""
+#     with open('issue_progress.json', 'w') as f:
+#         json.dump({'last_id': last_processed_id}, f)
 
-def load_progress():
-    """Load last processed issue ID from a file."""
-    try:
-        with open('issue_progress.json', 'r') as f:
-            data = json.load(f)
-            return data.get('last_id', 0)
-    except FileNotFoundError:
-        return 0
+# def load_progress():
+#     """Load last processed issue ID from a file."""
+#     try:
+#         with open('issue_progress.json', 'r') as f:
+#             data = json.load(f)
+#             return data.get('last_id', 0)
+#     except FileNotFoundError:
+#         return 0
 
 def process_issues(start_id=1000, end_id=1100, delay=3):
     """Process issues, modify body, and update them with rate limit handling."""
     # last_processed_id = load_progress()
-    start_id = max(start_id, last_processed_id + 1)  # Resume from last progress
+    # start_id = max(start_id, last_processed_id + 1)  # Resume from last progress
 
     print(f"🚀 Starting from issue ID: {start_id}")
 
