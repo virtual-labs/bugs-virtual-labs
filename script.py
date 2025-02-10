@@ -8,7 +8,7 @@ import pytz
 from github import Github
 
 # GitHub credentials (Securely accessed from environment variables)
-GITHUB_TOKEN = os.getenv("MY_GITHUB_TOKEN")
+GITHUB_TOKEN = os.getenv("REPO_ACCESS_TOKEN")
 
 if not GITHUB_TOKEN:
     raise ValueError("❌ GitHub Token not found. Ensure it is set in GitHub Secrets!")
