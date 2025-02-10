@@ -1,17 +1,29 @@
-import os
-import shutil
+name: Move PNG Images
+on:
+  workflow_dispatch:
 
-current_directory = os.getcwd() 
-target_directory = 'img/older' 
-
-if not os.path.exists(target_directory):
-    os.makedirs(target_directory)
-
-for file_name in os.listdir(current_directory):
-    if file_name.lower().endswith('.png'):
-        file_path = os.path.join(current_directory, file_name)
+jobs:
+  move-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
         
-        target_path = os.path.join(current_directory, target_directory, file_name)
-        
-        shutil.move(file_path, target_path)
-        print(f"Moved {file_name} to {target_directory}")
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          
+      - name: Run move images script
+        run: |
+          python script.py
+          
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git commit -m "Move PNG files to older directory" || echo "No changes to commit"
+          git push
