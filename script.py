@@ -59,7 +59,7 @@ def process_issue_body(body):
             try:
                 branch_index = url_parts.index('main') if 'main' in url_parts else url_parts.index('master')
                 if 'older' not in url_parts:
-                    url_parts.insert(branch_index + 1, 'older')
+                    url_parts.insert(branch_index + 1, 'img/older')
                 return '/'.join(url_parts)
             except ValueError:
                 return image_url
