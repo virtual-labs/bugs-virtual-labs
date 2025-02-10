@@ -18,7 +18,7 @@ jobs:
           
       - name: Run move images script
         run: |
-          python script.py
+          python move_images.py
           
       - name: Commit changes
         run: |
