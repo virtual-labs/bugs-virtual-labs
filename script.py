@@ -131,7 +131,7 @@ def update_issue(issue_id, title, body):
 #     except FileNotFoundError:
 #         return 0
 
-def process_issues(start_id=1000, end_id=1100, delay=3):
+def process_issues(start_id=1, end_id=999, delay=3):
     """Process issues, modify body, and update them with rate limit handling."""
     # last_processed_id = load_progress()
     # start_id = max(start_id, last_processed_id + 1)  # Resume from last progress
