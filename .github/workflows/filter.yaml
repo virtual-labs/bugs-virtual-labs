@@ -2,9 +2,9 @@ name: Bug Content Classification Workflow
 
 on:
   workflow_dispatch: ##Trigger manually
-  ##schedule every 2 hours
+  ##schedule every 24 hours
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '0 */24 * * *'
   # ##whenever issue is opened
   issues:
     types: [opened]
