@@ -31,28 +31,46 @@ with open('data/prompt_template.txt') as f:
     template = f.read().strip()
 assert template, "Prompt template is empty!"
 
+def safe_parse_json(text: str) -> dict:
+    """
+    Strips backticks/markdown and safely parses JSON output.
+    """
+    text = text.strip()
+    if text.startswith("```json"):
+        text = text[7:].strip()
+    elif text.startswith("```"):
+        text = text[3:].strip()
+    if text.endswith("```"):
+        text = text[:-3].strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        logger.error("Invalid JSON from AI: %s\nError: %s", text, e)
+        return {"category": "Unknown", "explanation": ""}
+
 def predict_label(comment: str) -> dict:
     prompt = template.format(comment)
 
-    response = client.models.generate_content(
-        model=MODEL_ID,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.7,
-            top_p=0.9,
-            max_output_tokens=512
+    try:
+        response = client.models.generate_content(
+            model=MODEL_ID,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.7,
+                top_p=0.9,
+                max_output_tokens=1024  # Increased for better completeness
+            )
         )
-    )
-    if response.candidates and response.candidates[0].content.parts:
-        text = response.text
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON from AI: %s", text)
+
+        if not response.candidates or not response.candidates[0].content.parts:
+            reason = response.candidates[0].finish_reason if response.candidates else "None"
+            logger.warning("No content parts (finish_reason=%s)", reason)
             return {"category": "Unknown", "explanation": ""}
-    else:
-        reason = response.candidates[0].finish_reason if response.candidates else "None"
-        logger.warning("No content parts (finish_reason=%s)", reason)
+
+        return safe_parse_json(response.text)
+
+    except Exception as e:
+        logger.error("Gemini call failed: %s", e)
         return {"category": "Unknown", "explanation": ""}
 
 def get_unprocessed_issues():
@@ -95,6 +113,7 @@ def process_issues():
         print(f"🤖 Gemini Prediction: {json.dumps(result, indent=2)}\n")
 
         action = "None"
+
         if category == "Inappropriate":
             add = requests.post(
                 f"{BASE_URL}/{num}/labels",
@@ -103,9 +122,13 @@ def process_issues():
             )
             action = "Labeled Inappropriate" if add.ok else "Failed to Label"
 
-        rem = requests.delete(f"{BASE_URL}/{num}/labels/UNPROCESSED", headers=HEADERS)
-        if rem.ok:
-            action += " + Removed UNPROCESSED"
+        # ✅ Only remove UNPROCESSED label if AI gave a valid category
+        if category != "Unknown":
+            rem = requests.delete(f"{BASE_URL}/{num}/labels/UNPROCESSED", headers=HEADERS)
+            if rem.ok:
+                action += " + Removed UNPROCESSED"
+            else:
+                action += " + Failed to Remove UNPROCESSED"
 
         summary.append([f"#{num}", category, action])
 
