@@ -58,7 +58,7 @@ def predict_label(comment: str) -> dict:
             config=types.GenerateContentConfig(
                 temperature=0.7,
                 top_p=0.9,
-                max_output_tokens=1024  # Increased for better completeness
+                max_output_tokens=4096 
             )
         )
 
