@@ -1,161 +1,102 @@
-import requests
 import os
 import logging
 import json
-import google.generativeai as genai
+import requests
+from google import genai
+from google.genai import types
 
-import typing_extensions as typing
-
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-file_handler = logging.FileHandler('prediction.log')
-logger.addHandler(file_handler)
+logger.addHandler(logging.FileHandler('prediction.log'))
 
 # Load environment variables
 TOKEN = os.getenv('REPO_ACCESS_TOKEN')
-KEY = os.getenv('API_KEY')
+KEY = os.getenv('GEMINI_API_KEY') or os.getenv('API_KEY')
+assert TOKEN and KEY, "Set both REPO_ACCESS_TOKEN & GEMINI_API_KEY in env"
 
-if not TOKEN or not KEY:
-    logger.critical("Please set the environment variables REPO_ACCESS_TOKEN and API_KEY")
-    exit(1)
+# Configure GenAI
+client = genai.Client(api_key=KEY)
+MODEL_ID = "gemini-2.5-flash"
 
 OWNER = "virtual-labs"
 REPO = "bugs-virtual-labs"
+BASE_URL = f"https://api.github.com/repos/{OWNER}/{REPO}/issues"
+HEADERS = {"Authorization": f"Bearer {TOKEN}"}
 
-# API URL and headers
-url = f"https://api.github.com/repos/{OWNER}/{REPO}/issues"
-headers = {
-    "Authorization": f"token {TOKEN}"
-}
-
-# Configure generative AI
-genai.configure(api_key=KEY)
-
-# Template for labeling issues
-# Read template from file
-file_path = os.path.join(os.getcwd(), 'data', 'prompt_template.txt')
-with open(file_path, 'r') as f:
+# Load prompt template
+with open('data/prompt_template.txt') as f:
     template = f.read().strip()
+assert template, "Prompt template is empty!"
 
-if not template:
-    logger.critical("Please set the template for the prompt")
-    exit(1)
-
-# Schema for the response
-class ContentCategory(typing.TypedDict):
-    category: str
-    explanation: str
-
-# Create the model
-generation_config = {
-    "temperature": 2,
-    "top_p": 0.95,
-    "max_output_tokens": 512,
-    "response_mime_type": "application/json",
-    "response_schema": ContentCategory
-}
-model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
-    generation_config=generation_config,
-)
-
-def predict_label(comment):
-
+def predict_label(comment: str) -> dict:
     prompt = template.format(comment)
-    logger.info("\n\nComment to be moderated:: %s", comment)
-    response = model.generate_content(prompt)
-    logger.info(response.text)
-    category = json.loads(response.text)
-    return category
+    logger.info("Prompt:\n%s", prompt)
 
-def get_comments(issues):
-    infos = []
-    for issue in issues:
-        curr_issue = {issue['number']: ''}
-        flag = False
-        content = issue['body'].split("\n")
-        for line in content:
-            if line.startswith('**Type(s) of Issue -**'):
-                flag = True
-                # line = line.replace('**Type(s) of Issue -**', 'Issues-')
-            elif 'UserAgent' in line:
-                flag = False
-                break
-            elif line.startswith('**Additional info-**'):
-                flag = True
-                # line = line.replace('**Additional info-**', 'Details-')
-
-            if flag:
-                # curr_issue[issue['number']] += line#.strip(' ')
-                curr_issue[issue['number']] = f"{curr_issue[issue['number']]}\n{line.strip()}"
-        infos.append(curr_issue)
-    return infos
-
-def get_labels(comments):
-    labels = []
-    for comment in comments:
-        logger.info('Processing issue: %i', list(comment.keys())[0])
-        comment_str = list(comment.values())[0]
-        classificationData = predict_label(comment_str)
-        labels.append({list(comment.keys())[0]: classificationData['category']})
-    return labels
-
-# Get all the issues with the Unprocessed label
-def get_issues(url, headers):
-    logger.debug("Fetching all issues from %s", url)
-    issues = []
-    params = {
-        "labels": "UNPROCESSED",
-        "state": "open",
-        "per_page": 100,
-        "page": 1
-    }
-    response = requests.get(url, headers=headers, params=params)
-    if response.status_code == 200:
-        issues = response.json()
-        logger.debug("Succesfully fetched all issues")
+    response = client.models.generate_content(
+        model=MODEL_ID,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.7,
+            top_p=0.9,
+            max_output_tokens=512
+        )
+    )
+    # Safe access to response.text
+    if response.candidates and response.candidates[0].content.parts:
+        text = response.text
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON from AI: %s", text)
+            return {"category": "Unknown", "explanation": ""}
     else:
-        logger.error(f"Error: {response.status_code} - {response.text}")
-    return issues
+        reason = response.candidates[0].finish_reason if response.candidates else "None"
+        logger.warning("No content parts (finish_reason=%s)", reason)
+        return {"category": "Unknown", "explanation": ""}
 
-# Remove a label from an issue
-def remove_label(issue_number, label):
-    url = f"https://api.github.com/repos/{OWNER}/{REPO}/issues/{issue_number}/labels/{label}"
-    response = requests.delete(url, headers=headers)
-    if response.status_code == 200:
-        print(f"Successfully removed label '{label}' from issue #{issue_number}")
-    else:
-        print(f"Error removing label '{label}' from issue #{issue_number}: {response.status_code} - {response.text}")
+def get_unprocessed_issues():
+    params = {"labels": "UNPROCESSED", "state": "open", "per_page": 100}
+    resp = requests.get(BASE_URL, headers=HEADERS, params=params)
+    resp.raise_for_status()
+    return resp.json()
 
-def main(url, headers):
-    # Fetch and process issues
-    issues = get_issues(url, headers)
+def extract_content(issue):
+    body = issue.get('body') or ""
+    lines = body.splitlines()
+    extract = []
+    flag = False
+    for line in lines:
+        if line.startswith(("**Type(s) of Issue -**", "**Additional info-**")):
+            flag = True
+        elif flag and line.strip().startswith("**") and "UserAgent" in line:
+            break
+        if flag:
+            extract.append(line.strip())
+    return "\n".join(extract)
 
-    # Sort issues by created date and get the oldest 12
-    issues = sorted(issues, key=lambda x: x['created_at'])
-    issues = issues[:12]
+def process_issues():
+    issues = get_unprocessed_issues()
+    issues.sort(key=lambda i: i['created_at'])
+    for issue in issues[:12]:
+        num = issue['number']
+        comment = extract_content(issue)
+        logger.info("Issue #%s -> comment extracted", num)
 
-    # Get labels for the issues
-    comments = get_comments(issues)
-    labels = get_labels(comments)
+        result = predict_label(comment)
+        category = result.get("category", "Unknown")
 
-    # Process issues for labeling and removing Unprocessed label
-    for label in labels:
-        issue_number = list(label.keys())[0]
-        label_value = list(label.values())[0]
+        # Add label if needed
+        if category == "Inappropriate":
+            add = requests.post(
+                f"{BASE_URL}/{num}/labels",
+                headers=HEADERS,
+                json={"labels": ["Inappropriate"]}
+            )
+            logger.info("Labeled #%s -> %s", num, add.status_code)
 
-        # Add the Inappropriate label for NSFW issues
-        if label_value == 'Inappropriate':
-            url = f"https://api.github.com/repos/{OWNER}/{REPO}/issues/{issue_number}/labels"
-            response = requests.post(url, headers=headers, json={"labels": ["Inappropriate"]})
-            logger.info(response.status_code)
-            logger.info(response.text)
-
-        # Remove the Unprocessed label for all issues
-        remove_label(issue_number, "UNPROCESSED")
-
+        # Always remove UNPROCESSED label
+        rem = requests.delete(f"{BASE_URL}/{num}/labels/UNPROCESSED", headers=HEADERS)
+        logger.info("Removed UNPROCESSED from #%s -> %s", num, rem.status_code)
 
 if __name__ == "__main__":
-   main(url, headers)
+    process_issues()
