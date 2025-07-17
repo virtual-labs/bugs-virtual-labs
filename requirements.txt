@@ -1,2 +1,2 @@
 requests
-google‑genai
+google-genai
