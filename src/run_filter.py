@@ -18,7 +18,7 @@ assert TOKEN and KEY, "Set both REPO_ACCESS_TOKEN & GEMINI_API_KEY in env"
 
 # GenAI client config
 client = genai.Client(api_key=KEY)
-MODEL_ID = "gemini-3-flash"
+MODEL_ID = "gemini-3-flash-preview"
 
 # GitHub repo info
 OWNER = "virtual-labs"
