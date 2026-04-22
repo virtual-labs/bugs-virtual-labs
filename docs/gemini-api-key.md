@@ -6,6 +6,6 @@ The API key which is used is under free quote. It is required to create new API 
 - Go to the bugs-virtual-labs repository
 - Navigate to settings --> Security and quality --> Secrets and variables --> Actions
 - Look for GOOGLE_API_KEY and click edit button.
-- update the new API key and save. 
+- Update the new API key and save. 
 ## AI Model Update in Script
 - The AI model has been updated from gemini-2.5-flash to gemini-3-flash-preview in the run_filter.py script (line 21). This update enables the use of the latest model for improved performance and results.
