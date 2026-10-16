@@ -1,6 +1,6 @@
 # Updates to API Key and Script
 ## Google API Key Update
-- A new Google API key has been generated using the g3bfk1@vlabs.ac.in account and configured in the repository secrets. This ensures secure and centralized management of the API key.
+- A new Google API key has been generated using the g3bfk2@vlabs.ac.in account and configured in the repository secrets. This ensures secure and centralized management of the API key.
 ### setup 
 The API key which is used is under free quote. It is required to create new API key with new user once the limit is reached. 
 - Go to the bugs-virtual-labs repository
